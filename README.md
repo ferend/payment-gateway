@@ -13,7 +13,6 @@ A simple, self-hosted payment page using PayTR iFrame API. Accepts credit/debit 
 
 ## Requirements
 
-- A server with [Dokku](https://dokku.com) installed
 - A [PayTR](https://www.paytr.com) merchant account (Merchant ID, Key, Salt)
 - A domain with DNS pointing to your server
 
