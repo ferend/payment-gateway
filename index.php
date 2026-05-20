@@ -268,6 +268,42 @@ if ($is_authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['
             text-decoration: none;
         }
         .back-link:hover { text-decoration: underline; }
+        .version-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border);
+        }
+        .version-tag {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-family: monospace;
+            letter-spacing: 0.05em;
+        }
+        .version-mode {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 0.15rem 0.5rem;
+            border-radius: 999px;
+        }
+        .version-mode.mock {
+            background: rgba(234,179,8,0.1);
+            color: #eab308;
+            border: 1px solid rgba(234,179,8,0.2);
+        }
+        .version-mode.test {
+            background: rgba(234,179,8,0.1);
+            color: #eab308;
+            border: 1px solid rgba(234,179,8,0.2);
+        }
+        .version-mode.live {
+            background: rgba(34,197,94,0.1);
+            color: #22c55e;
+            border: 1px solid rgba(34,197,94,0.2);
+        }
         @media (max-width: 520px) {
             .container { padding: 1rem; }
             .card { padding: 1.5rem; }
@@ -298,10 +334,11 @@ if ($is_authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['
             </form>
 
 <?php elseif ($token): ?>
+            <!-- ── Payment iFrame ── -->
             <a href="/" class="back-link">← Geri dön</a>
 
             <?php if ($token === 'MOCK'): ?>
-
+            <!-- MOCK MODE UI -->
             <div style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.25);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem;text-align:center;">
                 <div style="font-size:1.5rem;margin-bottom:0.5rem;">🧪</div>
                 <div style="color:#eab308;font-weight:600;font-size:0.9rem;margin-bottom:0.25rem;">MOCK ÖDEME MODU</div>
@@ -329,7 +366,7 @@ if ($is_authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['
             </form>
 
             <?php else: ?>
-
+            <!-- REAL PayTR iFrame -->
             <div style="text-align:center; margin-bottom:1rem;">
                 <p style="font-size:0.875rem; color:var(--text-muted);">Kart bilgilerinizi girerek ödemenizi tamamlayın</p>
             </div>
@@ -341,10 +378,8 @@ if ($is_authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['
             <?php endif; ?>
 
 <?php else: ?>
-
-            <?php if ($mock_mode): ?>
-                <div class="test-badge">🧪 Mock mod aktif — gerçek ödeme alınmaz, PayTR gerekmez</div>
-            <?php elseif ($test_mode === '1'): ?>
+            <!-- ── Payment Form ── -->
+            <?php if ($test_mode === '1' && !$mock_mode): ?>
                 <div class="test-badge">⚠ Test modu aktif — gerçek ödeme alınmaz</div>
             <?php endif; ?>
 
@@ -399,6 +434,17 @@ if ($is_authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['
                     <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                 </svg>
                 256-bit SSL ile korunan güvenli ödeme
+            </div>
+
+            <div class="version-bar">
+                <span class="version-tag">v1.1.0</span>
+                <?php if ($mock_mode): ?>
+                    <span class="version-mode mock">🧪 mock</span>
+                <?php elseif ($test_mode === '1'): ?>
+                    <span class="version-mode test">⚠ test</span>
+                <?php else: ?>
+                    <span class="version-mode live">● live</span>
+                <?php endif; ?>
             </div>
         </div>
     </div>
