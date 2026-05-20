@@ -1,14 +1,14 @@
 <?php
 session_start();
 
-// ── Config ──────────────────────────────────────────────
+// Conf
 $access_password = getenv('ACCESS_PASSWORD') ?: 'changeme';
 $merchant_id     = getenv('PAYTR_MERCHANT_ID');
 $merchant_key    = getenv('PAYTR_MERCHANT_KEY');
 $merchant_salt   = getenv('PAYTR_MERCHANT_SALT');
 $test_mode       = getenv('PAYTR_TEST_MODE') ?: '1';
+$mock_mode       = getenv('MOCK_MODE') === '1';
 
-// ── Password Gate ───────────────────────────────────────
 $is_authenticated = isset($_SESSION['authenticated']) && $_SESSION['authenticated'] === true;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['access_password'])) {
@@ -27,7 +27,6 @@ if (isset($_GET['logout'])) {
     exit;
 }
 
-// ── Payment Logic ───────────────────────────────────────
 $error_msg = '';
 $token = '';
 
@@ -43,6 +42,13 @@ if ($is_authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['
         $error_msg = 'Geçerli bir e-posta adresi giriniz.';
     } elseif ($amount_tl < 1) {
         $error_msg = 'Tutar en az 1 TL olmalıdır.';
+    } elseif ($mock_mode) {
+        // ── MOCK MODE: skip PayTR, show fake iframe ──────────
+        $token        = 'MOCK';
+        $merchant_oid = 'PG' . time() . rand(1000, 9999);
+        $payment_amount = intval($amount_tl * 100);
+        $_SESSION['mock_oid']    = $merchant_oid;
+        $_SESSION['mock_amount'] = $payment_amount;
     } elseif (!$merchant_id || !$merchant_key || !$merchant_salt) {
         $error_msg = 'PayTR bilgileri eksik. Lütfen environment variable\'ları kontrol edin.';
     } else {
@@ -292,8 +298,38 @@ if ($is_authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['
             </form>
 
 <?php elseif ($token): ?>
-            <!-- ── Payment iFrame ── -->
             <a href="/" class="back-link">← Geri dön</a>
+
+            <?php if ($token === 'MOCK'): ?>
+
+            <div style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.25);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem;text-align:center;">
+                <div style="font-size:1.5rem;margin-bottom:0.5rem;">🧪</div>
+                <div style="color:#eab308;font-weight:600;font-size:0.9rem;margin-bottom:0.25rem;">MOCK ÖDEME MODU</div>
+                <div style="color:var(--text-muted);font-size:0.8rem;">Gerçek ödeme yapılmayacak. Sonucu seçin:</div>
+            </div>
+            <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:1.5rem;text-align:center;margin-bottom:1rem;">
+                <div style="color:var(--text-muted);font-size:0.8rem;margin-bottom:0.25rem;">Sipariş No</div>
+                <div style="font-weight:700;letter-spacing:0.05em;font-size:0.9rem;"><?php echo htmlspecialchars($_SESSION['mock_oid'] ?? ''); ?></div>
+                <div style="margin-top:0.75rem;color:var(--text-muted);font-size:0.8rem;">Tutar</div>
+                <div style="font-size:1.75rem;font-weight:700;">₺<?php echo number_format(($payment_amount ?? 0) / 100, 2); ?></div>
+            </div>
+            <form method="POST" action="/mock_payment.php">
+                <input type="hidden" name="merchant_oid" value="<?php echo htmlspecialchars($_SESSION['mock_oid'] ?? ''); ?>">
+                <input type="hidden" name="amount" value="<?php echo htmlspecialchars($_SESSION['mock_amount'] ?? ''); ?>">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+                    <button type="submit" name="action" value="success"
+                        style="background:#16a34a;padding:1rem;border-radius:10px;font-weight:600;font-size:0.95rem;cursor:pointer;border:none;color:white;">
+                        ✓ Ödeme Başarılı
+                    </button>
+                    <button type="submit" name="action" value="fail"
+                        style="background:#dc2626;padding:1rem;border-radius:10px;font-weight:600;font-size:0.95rem;cursor:pointer;border:none;color:white;">
+                        ✗ Ödeme Başarısız
+                    </button>
+                </div>
+            </form>
+
+            <?php else: ?>
+
             <div style="text-align:center; margin-bottom:1rem;">
                 <p style="font-size:0.875rem; color:var(--text-muted);">Kart bilgilerinizi girerek ödemenizi tamamlayın</p>
             </div>
@@ -302,10 +338,13 @@ if ($is_authenticated && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['
                 <iframe src="https://www.paytr.com/odeme/guvenli/<?php echo htmlspecialchars($token); ?>" id="paytriframe" frameborder="0" scrolling="no"></iframe>
                 <script>iFrameResize({}, '#paytriframe');</script>
             </div>
+            <?php endif; ?>
 
 <?php else: ?>
-            <!-- ── Payment Form ── -->
-            <?php if ($test_mode === '1'): ?>
+
+            <?php if ($mock_mode): ?>
+                <div class="test-badge">🧪 Mock mod aktif — gerçek ödeme alınmaz, PayTR gerekmez</div>
+            <?php elseif ($test_mode === '1'): ?>
                 <div class="test-badge">⚠ Test modu aktif — gerçek ödeme alınmaz</div>
             <?php endif; ?>
 
